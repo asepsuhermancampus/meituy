@@ -10,6 +10,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -17,6 +18,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
@@ -29,9 +33,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var filterRecyclerView: RecyclerView
     private lateinit var btnSelectImage: Button
     private lateinit var btnSaveImage: Button
+    private lateinit var progressBar: ProgressBar
 
     private var currentBitmap: Bitmap? = null
-    private var filteredBitmap: Bitmap? = null
+    private var originalBitmap: Bitmap? = null
     private var currentFilter: FilterType = FilterType.ORIGINAL
     private lateinit var filterAdapter: FilterAdapter
 
@@ -60,6 +65,8 @@ class MainActivity : AppCompatActivity() {
         filterRecyclerView = findViewById(R.id.filterRecyclerView)
         btnSelectImage = findViewById(R.id.btnSelectImage)
         btnSaveImage = findViewById(R.id.btnSaveImage)
+        progressBar = findViewById(R.id.progressBar)
+        progressBar.visibility = android.view.View.GONE
     }
 
     private fun setupRecyclerView() {
@@ -112,15 +119,28 @@ class MainActivity : AppCompatActivity() {
     ) { uri: Uri? ->
         uri?.let {
             try {
-                currentBitmap = MediaStore.Images.Media.getBitmap(contentResolver, it)
-                currentBitmap?.let { bitmap ->
-                    filteredBitmap = bitmap.copy(bitmap.config, true)
-                    imageView.setImageBitmap(bitmap)
-                    filterAdapter.setSelectedFilter(FilterType.ORIGINAL)
-                    currentFilter = FilterType.ORIGINAL
+                progressBar.visibility = android.view.View.VISIBLE
+                GlobalScope.launch(Dispatchers.Default) {
+                    val bitmap = MediaStore.Images.Media.getBitmap(contentResolver, it)
+                    
+                    originalBitmap?.recycle()
+                    currentBitmap?.recycle()
+                    
+                    originalBitmap = bitmap
+                    currentBitmap = bitmap.copy(bitmap.config, true)
+                    
+                    runOnUiThread {
+                        imageView.setImageBitmap(currentBitmap)
+                        filterAdapter.setSelectedFilter(FilterType.ORIGINAL)
+                        currentFilter = FilterType.ORIGINAL
+                        progressBar.visibility = android.view.View.GONE
+                    }
                 }
             } catch (e: Exception) {
-                Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+                runOnUiThread {
+                    Toast.makeText(this, "Error loading image: ${e.message}", Toast.LENGTH_SHORT).show()
+                    progressBar.visibility = android.view.View.GONE
+                }
             }
         }
     }
@@ -131,27 +151,68 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyFilter(filterType: FilterType) {
         currentFilter = filterType
-        filteredBitmap?.let { bitmap ->
-            val filtered = FilterEngine.applyFilter(bitmap, filterType)
-            imageView.setImageBitmap(filtered)
-            currentBitmap = filtered.copy(filtered.config, true)
+        originalBitmap?.let { original ->
+            progressBar.visibility = android.view.View.VISIBLE
+            btnSelectImage.isEnabled = false
+            btnSaveImage.isEnabled = false
+            
+            GlobalScope.launch(Dispatchers.Default) {
+                val workBitmap = original.copy(original.config, true)
+                val filtered = FilterEngine.applyFilter(workBitmap, filterType)
+                
+                currentBitmap?.recycle()
+                currentBitmap = filtered
+                
+                runOnUiThread {
+                    imageView.setImageBitmap(currentBitmap)
+                    progressBar.visibility = android.view.View.GONE
+                    btnSelectImage.isEnabled = true
+                    btnSaveImage.isEnabled = true
+                }
+            }
         }
     }
 
     private fun saveImage() {
-        if (filteredBitmap == null) return
+        if (currentBitmap == null) return
 
-        val savedImageUri = MediaStore.Images.Media.insertImage(
-            contentResolver,
-            filteredBitmap,
-            "Meituy_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}",
-            "Photo edited with Meituy"
-        )
+        progressBar.visibility = android.view.View.VISIBLE
+        btnSaveImage.isEnabled = false
 
-        if (savedImageUri != null) {
-            Toast.makeText(this, "Image saved successfully", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show()
+        GlobalScope.launch(Dispatchers.Default) {
+            try {
+                val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+                val fileName = "Meituy_${timestamp}_${currentFilter.displayName}"
+                
+                val savedImageUri = MediaStore.Images.Media.insertImage(
+                    contentResolver,
+                    currentBitmap,
+                    fileName,
+                    "Photo edited with Meituy - Filter: ${currentFilter.displayName}"
+                )
+
+                runOnUiThread {
+                    if (savedImageUri != null) {
+                        Toast.makeText(this@MainActivity, "Image saved successfully", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "Failed to save image", Toast.LENGTH_SHORT).show()
+                    }
+                    progressBar.visibility = android.view.View.GONE
+                    btnSaveImage.isEnabled = true
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Error saving image: ${e.message}", Toast.LENGTH_SHORT).show()
+                    progressBar.visibility = android.view.View.GONE
+                    btnSaveImage.isEnabled = true
+                }
+            }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        currentBitmap?.recycle()
+        originalBitmap?.recycle()
     }
 }

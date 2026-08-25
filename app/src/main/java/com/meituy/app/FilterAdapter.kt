@@ -71,7 +71,11 @@ class FilterAdapter(
                 FilterType.BLUR_REDUCTION -> R.drawable.filter_sharpen
                 FilterType.COLOR_CORRECTION -> R.drawable.filter_color_correction
                 FilterType.MEITU_STYLE -> R.drawable.filter_meitu_style
-                else -> R.drawable.filter_original
+                FilterType.IPHONE_VIBRANT -> R.drawable.filter_iphone_vibrant
+                FilterType.IPHONE_NATURAL -> R.drawable.filter_iphone_natural
+                FilterType.IPHONE_DRAMATIC -> R.drawable.filter_iphone_dramatic
+                FilterType.IPHONE_PORTRAIT -> R.drawable.filter_iphone_portrait
+                FilterType.IPHONE_CINEMATIC -> R.drawable.filter_iphone_cinematic
             }
             
             filterThumbnail.setImageResource(thumbnailResId)
@@ -87,7 +91,12 @@ class FilterAdapter(
             FilterType.SATURATION,
             FilterType.BLUR_REDUCTION,
             FilterType.COLOR_CORRECTION,
-            FilterType.MEITU_STYLE
+            FilterType.MEITU_STYLE,
+            FilterType.IPHONE_VIBRANT,
+            FilterType.IPHONE_NATURAL,
+            FilterType.IPHONE_DRAMATIC,
+            FilterType.IPHONE_PORTRAIT,
+            FilterType.IPHONE_CINEMATIC
         )
     }
 }
