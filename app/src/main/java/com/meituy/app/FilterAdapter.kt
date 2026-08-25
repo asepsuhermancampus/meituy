@@ -56,10 +56,10 @@ class FilterAdapter(
             
             if (isSelected) {
                 cardView.setCardBackgroundColor(itemView.context.getColor(R.color.accent))
-                filterName.setTextColor(itemView.context.getColor(R.color.white))
+                filterName.setTextColor(itemView.context.getColor(R.color.bg_dark))
             } else {
-                cardView.setCardBackgroundColor(itemView.context.getColor(R.color.white))
-                filterName.setTextColor(itemView.context.getColor(R.color.text_primary))
+                cardView.setCardBackgroundColor(itemView.context.getColor(R.color.bg_card))
+                filterName.setTextColor(itemView.context.getColor(R.color.text_secondary))
             }
             
             val thumbnailResId = when (filter) {

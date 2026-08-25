@@ -4,16 +4,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_light">
+    android:background="@color/bg_dark">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appBar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
+        android:background="@color/primary"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar">
+        android:elevation="8dp">
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -21,7 +22,7 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/primary"
             app:title="@string/app_name"
-            app:titleTextColor="@color/white"
+            app:titleTextColor="@color/text_primary"
             app:popupTheme="@style/ThemeOverlay.MaterialComponents.Light" />
 
     </com.google.android.material.appbar.AppBarLayout>
@@ -31,7 +32,8 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_margin="12dp"
-        android:background="@color/bg_dark"
+        android:background="@color/bg_card"
+        android:foreground="?attr/selectableItemBackground"
         app:layout_constraintTop_toBottomOf="@+id/appBar"
         app:layout_constraintBottom_toTopOf="@+id/filterRecyclerView"
         app:layout_constraintStart_toStartOf="parent"
@@ -49,7 +51,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:indeterminateTint="@color/accent" />
 
         <TextView
             android:id="@+id/placeholderText"
@@ -65,11 +68,12 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/filterRecyclerView"
         android:layout_width="0dp"
-        android:layout_height="110dp"
+        android:layout_height="120dp"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingTop="8dp"
         android:paddingBottom="8dp"
+        android:background="@color/bg_light"
         android:orientation="horizontal"
         app:layout_constraintBottom_toTopOf="@+id/sliderContainer"
         app:layout_constraintStart_toStartOf="parent"
@@ -80,7 +84,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="12dp"
+        android:padding="16dp"
+        android:background="@color/bg_light"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/buttonContainer"
         app:layout_constraintStart_toStartOf="parent"
@@ -92,8 +97,9 @@
             android:layout_height="wrap_content"
             android:text="@string/filter_intensity"
             android:textColor="@color/text_primary"
-            android:textSize="12sp"
-            android:layout_marginBottom="8dp" />
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp" />
 
         <com.google.android.material.slider.Slider
             android:id="@+id/intensitySlider"
@@ -102,7 +108,10 @@
             android:valueFrom="0"
             android:valueTo="100"
             android:stepSize="1"
-            android:value="100" />
+            android:value="100"
+            app:thumbColor="@color/accent"
+            app:trackColorActive="@color/accent"
+            app:trackColorInactive="@color/surface" />
 
     </LinearLayout>
 
@@ -112,6 +121,8 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="12dp"
+        android:background="@color/bg_light"
+        android:spacing="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -121,20 +132,27 @@
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginEnd="6dp"
+            android:layout_marginEnd="4dp"
             android:text="@string/select_image"
+            android:textColor="@color/bg_dark"
             app:icon="@android:drawable/ic_menu_gallery"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            app:iconTint="@color/bg_dark"
+            app:backgroundTint="@color/accent"
+            style="@style/Widget.MaterialComponents.Button" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnReset"
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginStart="3dp"
-            android:layout_marginEnd="3dp"
+            android:layout_marginStart="2dp"
+            android:layout_marginEnd="2dp"
             android:text="@string/reset"
+            android:textColor="@color/text_primary"
             app:icon="@android:drawable/ic_menu_revert"
+            app:iconTint="@color/accent"
+            app:strokeColor="@color/accent"
+            app:strokeWidth="2dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
         <com.google.android.material.button.MaterialButton
@@ -142,9 +160,12 @@
             android:layout_width="0dp"
             android:layout_height="48dp"
             android:layout_weight="1"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="4dp"
             android:text="@string/save_image"
+            android:textColor="@color/bg_dark"
             app:icon="@android:drawable/ic_menu_save"
+            app:iconTint="@color/bg_dark"
+            app:backgroundTint="@color/accent"
             style="@style/Widget.MaterialComponents.Button" />
 
     </LinearLayout>
