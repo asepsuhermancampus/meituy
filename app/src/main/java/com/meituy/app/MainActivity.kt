@@ -72,8 +72,8 @@ class MainActivity : AppCompatActivity() {
                     val bitmap = try {
                         val options = BitmapFactory.Options().apply {
                             inJustDecodeBounds = true
-                            BitmapFactory.decodeStream(contentResolver.openInputStream(it), null, options)
                         }
+                        BitmapFactory.decodeStream(contentResolver.openInputStream(it), null, options)
                         
                         val newOptions = BitmapFactory.Options().apply {
                             inSampleSize = calculateInSampleSize(options, 2048, 2048)
