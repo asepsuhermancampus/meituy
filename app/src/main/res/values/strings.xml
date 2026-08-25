@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meituy</string>
+    <string name="select_image">Select Image</string>
+    <string name="apply_filter">Apply Filter</string>
+    <string name="save_image">Save Image</string>
+    <string name="share_image">Share Image</string>
+    <string name="no_image">No image selected</string>
+    <string name="filter_original">Original</string>
+    <string name="filter_enhance">Enhance</string>
+    <string name="filter_brightness">Brightness</string>
+    <string name="filter_contrast">Contrast</string>
+    <string name="filter_saturation">Saturation</string>
+    <string name="filter_blur_reduction">Blur Reduction</string>
+    <string name="filter_color_correction">Color Correction</string>
+</resources>
