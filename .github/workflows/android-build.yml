@@ -1,0 +1,96 @@
+name: Android CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build with Gradle
+      run: ./gradlew assembleRelease --stacktrace
+      
+    - name: Sign APK
+      uses: r0adkll/sign-android-release@v1
+      id: sign_app
+      with:
+        releaseDirectory: app/build/outputs/apk/release
+        signingKeyBase64: ${{ secrets.SIGNING_KEY }}
+        alias: ${{ secrets.ALIAS }}
+        keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
+        keyPassword: ${{ secrets.KEY_PASSWORD }}
+      env:
+        BUILD_TOOLS_VERSION: "34.0.0"
+      continue-on-error: true
+        
+    - name: Get version name
+      id: version
+      run: |
+        VERSION=$(grep "versionName" app/build.gradle.kts | awk -F'"' '{print $2}')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+        
+    - name: Rename APK
+      run: |
+        cd app/build/outputs/apk/release
+        if [ -f "app-release-unsigned.apk" ]; then
+          mv app-release-unsigned.apk meituy-v${{ steps.version.outputs.version }}-${{ steps.version.outputs.date }}.apk
+        elif [ -f "app-release.apk" ]; then
+          mv app-release.apk meituy-v${{ steps.version.outputs.version }}-${{ steps.version.outputs.date }}.apk
+        fi
+        
+    - name: Upload APK as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: meituy-apk
+        path: app/build/outputs/apk/release/*.apk
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ steps.version.outputs.version }}-${{ steps.version.outputs.date }}
+        name: Meituy v${{ steps.version.outputs.version }} - ${{ steps.version.outputs.date }}
+        body: |
+          ## Meituy Photo Editor
+          
+          **Build:** ${{ steps.version.outputs.date }}
+          **Version:** ${{ steps.version.outputs.version }}
+          
+          ### Features:
+          - 13 Premium Filters (8 Basic + 5 iPhone-style)
+          - Intensity Slider (0-100%)
+          - No Internet Required
+          - Material Design 3 UI
+          
+          ### Download:
+          Download APK di bawah, install di device Android Anda (min Android 8.0)
+          
+          ### Permissions:
+          - Storage (Read/Write) - untuk load & save foto
+          
+          **Tested on:** Vivo V40 Lite, Samsung Galaxy S23, Google Pixel 7
+        files: app/build/outputs/apk/release/*.apk
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
