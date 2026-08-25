@@ -64,18 +64,13 @@ class FilterAdapter(
             
             val thumbnailResId = when (filter) {
                 FilterType.ORIGINAL -> R.drawable.filter_original
-                FilterType.ENHANCE -> R.drawable.filter_enhance
-                FilterType.BRIGHTNESS -> R.drawable.filter_brightness
-                FilterType.CONTRAST -> R.drawable.filter_contrast
-                FilterType.SATURATION -> R.drawable.filter_saturation
-                FilterType.BLUR_REDUCTION -> R.drawable.filter_sharpen
-                FilterType.COLOR_CORRECTION -> R.drawable.filter_color_correction
-                FilterType.MEITU_STYLE -> R.drawable.filter_meitu_style
-                FilterType.IPHONE_VIBRANT -> R.drawable.filter_iphone_vibrant
-                FilterType.IPHONE_NATURAL -> R.drawable.filter_iphone_natural
-                FilterType.IPHONE_DRAMATIC -> R.drawable.filter_iphone_dramatic
-                FilterType.IPHONE_PORTRAIT -> R.drawable.filter_iphone_portrait
-                FilterType.IPHONE_CINEMATIC -> R.drawable.filter_iphone_cinematic
+                FilterType.RICON_FLASH -> R.drawable.filter_original
+                FilterType.FLASH_FILM -> R.drawable.filter_original
+                FilterType.G7X -> R.drawable.filter_original
+                FilterType.FUJI_FLASH -> R.drawable.filter_original
+                FilterType.GOLDEN_HOUR -> R.drawable.filter_original
+                FilterType.MATAHARI_TERBENAM -> R.drawable.filter_original
+                FilterType.LAMPU_KILAT_IPHONE -> R.drawable.filter_original
             }
             
             filterThumbnail.setImageResource(thumbnailResId)
@@ -85,18 +80,13 @@ class FilterAdapter(
     companion object {
         fun createDefaultList(): List<FilterType> = listOf(
             FilterType.ORIGINAL,
-            FilterType.ENHANCE,
-            FilterType.BRIGHTNESS,
-            FilterType.CONTRAST,
-            FilterType.SATURATION,
-            FilterType.BLUR_REDUCTION,
-            FilterType.COLOR_CORRECTION,
-            FilterType.MEITU_STYLE,
-            FilterType.IPHONE_VIBRANT,
-            FilterType.IPHONE_NATURAL,
-            FilterType.IPHONE_DRAMATIC,
-            FilterType.IPHONE_PORTRAIT,
-            FilterType.IPHONE_CINEMATIC
+            FilterType.RICON_FLASH,
+            FilterType.FLASH_FILM,
+            FilterType.G7X,
+            FilterType.FUJI_FLASH,
+            FilterType.GOLDEN_HOUR,
+            FilterType.MATAHARI_TERBENAM,
+            FilterType.LAMPU_KILAT_IPHONE
         )
     }
 }
