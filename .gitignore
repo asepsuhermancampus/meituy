@@ -8,3 +8,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.webp

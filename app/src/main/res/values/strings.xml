@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Meituy</string>
-    <string name="select_image">Select Image</string>
+    <string name="select_image">Gallery</string>
     <string name="apply_filter">Apply Filter</string>
-    <string name="save_image">Save Image</string>
-    <string name="share_image">Share Image</string>
-    <string name="no_image">No image selected</string>
+    <string name="save_image">Save</string>
+    <string name="share_image">Share</string>
+    <string name="reset">Reset</string>
+    <string name="no_image">Tap Gallery to select a photo</string>
     <string name="filter_original">Original</string>
     <string name="filter_enhance">Enhance</string>
     <string name="filter_brightness">Brightness</string>
     <string name="filter_contrast">Contrast</string>
     <string name="filter_saturation">Saturation</string>
-    <string name="filter_blur_reduction">Blur Reduction</string>
-    <string name="filter_color_correction">Color Correction</string>
+    <string name="filter_blur_reduction">Sharp</string>
+    <string name="filter_color_correction">Color Fix</string>
+    <string name="filter_intensity">Filter Intensity</string>
+    <string name="image_saved">Image saved to gallery</string>
+    <string name="image_save_error">Failed to save image</string>
+    <string name="permission_required">Storage permission required</string>
+    <string name="error_loading_image">Error loading image</string>
 </resources>
