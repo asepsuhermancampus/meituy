@@ -6,9 +6,7 @@ import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
-import kotlin.math.pow
 import kotlin.math.sqrt
-import kotlin.math.ln
 
 object FilterEngine {
 

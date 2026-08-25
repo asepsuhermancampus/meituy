@@ -1,15 +1,15 @@
 package com.meituy.app
 
 import android.Manifest
+import android.content.ContentValues
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.provider.MediaStore
 import android.view.View
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -18,18 +18,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.io.OutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -50,6 +49,7 @@ class MainActivity : AppCompatActivity() {
     private var currentIntensity: Float = 1.0f
     private lateinit var filterAdapter: FilterAdapter
     private var isProcessing: Boolean = false
+    private var lastSavedUri: Uri? = null
 
     private val requestStoragePermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -59,6 +59,58 @@ class MainActivity : AppCompatActivity() {
             selectImageFromGallery()
         } else {
             Toast.makeText(this, R.string.permission_required, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            try {
+                showLoading(true)
+                lifecycleScope.launch(Dispatchers.Default) {
+                    val bitmap = try {
+                        val options = BitmapFactory.Options().apply {
+                            inJustDecodeBounds = true
+                            BitmapFactory.decodeStream(contentResolver.openInputStream(it), null, options)
+                        }
+                        
+                        val newOptions = BitmapFactory.Options().apply {
+                            inSampleSize = calculateInSampleSize(options, 2048, 2048)
+                        }
+                        BitmapFactory.decodeStream(contentResolver.openInputStream(it), null, newOptions)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    
+                    runOnUiThread {
+                        if (bitmap != null) {
+                            originalBitmap?.recycle()
+                            currentBitmap?.recycle()
+                            
+                            originalBitmap = bitmap
+                            currentBitmap = bitmap.copy(bitmap.config, true)
+                            
+                            imageView.setImageBitmap(currentBitmap)
+                            filterAdapter.setSelectedFilter(FilterType.ORIGINAL)
+                            currentFilter = FilterType.ORIGINAL
+                            currentIntensity = 1.0f
+                            intensitySlider.value = 100f
+                            sliderContainer.visibility = View.GONE
+                            showLoading(false)
+                            updatePlaceholderVisibility()
+                        } else {
+                            Toast.makeText(this@MainActivity, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
+                            showLoading(false)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread {
+                    Toast.makeText(this, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
+                    showLoading(false)
+                }
+            }
         }
     }
 
@@ -134,72 +186,26 @@ class MainActivity : AppCompatActivity() {
     private fun checkStoragePermission() {
         val readPermission = checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
         val writePermission = checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        val readMediaPermission = checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
 
-        if (readPermission != PackageManager.PERMISSION_GRANTED || 
-            writePermission != PackageManager.PERMISSION_GRANTED) {
-            requestStoragePermission.launch(
-                arrayOf(
-                    Manifest.permission.READ_EXTERNAL_STORAGE,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
-                )
-            )
+        val permissionsToRequest = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
+            if (readPermission != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+            if (writePermission != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        } else {
+            if (readMediaPermission != PackageManager.PERMISSION_GRANTED) {
+                permissionsToRequest.add(Manifest.permission.READ_MEDIA_IMAGES)
+            }
+        }
+
+        if (permissionsToRequest.isNotEmpty()) {
+            requestStoragePermission.launch(permissionsToRequest.toTypedArray())
         } else {
             selectImageFromGallery()
-        }
-    }
-
-    private val pickImageLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            try {
-                showLoading(true)
-                GlobalScope.launch(Dispatchers.Default) {
-                    val bitmap = try {
-                        val inputStream = contentResolver.openInputStream(it)
-                        val options = BitmapFactory.Options().apply {
-                            inJustDecodeBounds = true
-                        }
-                        BitmapFactory.decodeStream(inputStream, null, options)
-                        inputStream?.close()
-                        
-                        val newInputStream = contentResolver.openInputStream(it)
-                        val newOptions = BitmapFactory.Options().apply {
-                            inSampleSize = calculateInSampleSize(options, 2048, 2048)
-                        }
-                        BitmapFactory.decodeStream(newInputStream, null, newOptions)
-                    } catch (e: Exception) {
-                        null
-                    }
-                    
-                    runOnUiThread {
-                        if (bitmap != null) {
-                            originalBitmap?.recycle()
-                            currentBitmap?.recycle()
-                            
-                            originalBitmap = bitmap
-                            currentBitmap = bitmap.copy(bitmap.config, true)
-                            
-                            imageView.setImageBitmap(currentBitmap)
-                            filterAdapter.setSelectedFilter(FilterType.ORIGINAL)
-                            currentFilter = FilterType.ORIGINAL
-                            currentIntensity = 1.0f
-                            intensitySlider.value = 100f
-                            sliderContainer.visibility = View.GONE
-                            showLoading(false)
-                            updatePlaceholderVisibility()
-                        } else {
-                            Toast.makeText(this@MainActivity, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
-                            showLoading(false)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
-                    showLoading(false)
-                }
-            }
         }
     }
 
@@ -248,7 +254,7 @@ class MainActivity : AppCompatActivity() {
             showLoading(true)
             isProcessing = true
             
-            GlobalScope.launch(Dispatchers.Default) {
+            lifecycleScope.launch(Dispatchers.Default) {
                 try {
                     val workBitmap = original.copy(original.config, true)
                     val filtered = FilterEngine.applyFilter(workBitmap, filterType, intensity)
@@ -290,27 +296,50 @@ class MainActivity : AppCompatActivity() {
         showLoading(true)
         btnSaveImage.isEnabled = false
 
-        GlobalScope.launch(Dispatchers.Default) {
+        lifecycleScope.launch(Dispatchers.Default) {
             try {
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
                 val filterName = currentFilter.displayName.replace(" ", "_")
                 val fileName = "Meituy_${filterName}_${timestamp}"
                 
-                val savedImageUri = MediaStore.Images.Media.insertImage(
-                    contentResolver,
-                    currentBitmap,
-                    fileName,
-                    "Photo edited with Meituy - Filter: ${currentFilter.displayName}"
-                )
-
-                runOnUiThread {
-                    if (savedImageUri != null) {
-                        Toast.makeText(this@MainActivity, R.string.image_saved, Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(this@MainActivity, R.string.image_save_error, Toast.LENGTH_SHORT).show()
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.DATE_TAKEN, System.currentTimeMillis())
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Images.Media.RELATIVE_PATH, "DCIM/Meituy")
                     }
-                    showLoading(false)
-                    btnSaveImage.isEnabled = true
+                }
+
+                val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                
+                runOnUiThread {
+                    if (uri != null) {
+                        lastSavedUri = uri
+                        try {
+                            val outputStream: OutputStream? = contentResolver.openOutputStream(uri)
+                            outputStream?.use {
+                                currentBitmap?.compress(Bitmap.CompressFormat.JPEG, 90, it)
+                            }
+                            runOnUiThread {
+                                Toast.makeText(this@MainActivity, R.string.image_saved, Toast.LENGTH_SHORT).show()
+                                showLoading(false)
+                                btnSaveImage.isEnabled = true
+                            }
+                        } catch (e: Exception) {
+                            runOnUiThread {
+                                Toast.makeText(this@MainActivity, "Error saving: ${e.message}", Toast.LENGTH_SHORT).show()
+                                showLoading(false)
+                                btnSaveImage.isEnabled = true
+                            }
+                        }
+                    } else {
+                        runOnUiThread {
+                            Toast.makeText(this@MainActivity, R.string.image_save_error, Toast.LENGTH_SHORT).show()
+                            showLoading(false)
+                            btnSaveImage.isEnabled = true
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 runOnUiThread {
