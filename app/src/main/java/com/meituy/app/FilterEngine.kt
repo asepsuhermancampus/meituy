@@ -29,18 +29,27 @@ object FilterEngine {
         return result
     }
 
-    private fun applyRiconFlash(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-
-        val flashMatrix = ColorMatrix(floatArrayOf(
-            1.2f * intensity, 0.0f, 0.0f, 0f, 20f * intensity,
-            0.0f, 1.15f * intensity, 0.0f, 0f, 15f * intensity,
-            0.0f, 0.0f, 1.0f, 0f, 0f,
+    // Interpolasi dari identitas: intensity 0 = gambar asli, 1 = kekuatan penuh.
+    private fun blendedMatrix(gains: FloatArray, offsets: FloatArray, intensity: Float): ColorMatrix {
+        return ColorMatrix(floatArrayOf(
+            1f + (gains[0] - 1f) * intensity, 0.0f, 0.0f, 0f, offsets[0] * intensity,
+            0.0f, 1f + (gains[1] - 1f) * intensity, 0.0f, 0f, offsets[1] * intensity,
+            0.0f, 0.0f, 1f + (gains[2] - 1f) * intensity, 0f, offsets[2] * intensity,
             0.0f, 0.0f, 0.0f, 1f, 0f
         ))
-        paint.colorFilter = ColorMatrixColorFilter(flashMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
+    }
+
+    private fun drawWithMatrix(bitmap: Bitmap, matrix: ColorMatrix) {
+        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(matrix) }
+        Canvas(bitmap).drawBitmap(bitmap, 0f, 0f, paint)
+    }
+
+    private fun applyRiconFlash(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
+        drawWithMatrix(bitmap, blendedMatrix(
+            gains = floatArrayOf(1.2f, 1.15f, 1.0f),
+            offsets = floatArrayOf(20f, 15f, 0f),
+            intensity = intensity
+        ))
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -71,17 +80,11 @@ object FilterEngine {
     }
 
     private fun applyFlashFilm(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-
-        val filmMatrix = ColorMatrix(floatArrayOf(
-            1.1f + 0.1f * intensity, 0.0f, 0.0f, 0f, 10f * intensity,
-            0.0f, 1.0f + 0.08f * intensity, 0.02f * intensity, 0f, 5f * intensity,
-            0.0f, 0.0f, 0.95f + 0.1f * intensity, 0f, 0f,
-            0.0f, 0.0f, 0.0f, 1f, 0f
+        drawWithMatrix(bitmap, blendedMatrix(
+            gains = floatArrayOf(1.2f, 1.08f, 1.05f),
+            offsets = floatArrayOf(10f, 5f, 0f),
+            intensity = intensity
         ))
-        paint.colorFilter = ColorMatrixColorFilter(filmMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -111,17 +114,11 @@ object FilterEngine {
     }
 
     private fun applyG7X(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-
-        val g7xMatrix = ColorMatrix(floatArrayOf(
-            1.15f + 0.1f * intensity, 0.0f, 0.0f, 0f, 12f * intensity,
-            0.0f, 1.1f + 0.1f * intensity, 0.0f, 0f, 8f * intensity,
-            0.0f, 0.0f, 1.05f + 0.12f * intensity, 0f, 10f * intensity,
-            0.0f, 0.0f, 0.0f, 1f, 0f
+        drawWithMatrix(bitmap, blendedMatrix(
+            gains = floatArrayOf(1.25f, 1.2f, 1.17f),
+            offsets = floatArrayOf(12f, 8f, 10f),
+            intensity = intensity
         ))
-        paint.colorFilter = ColorMatrixColorFilter(g7xMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -155,17 +152,11 @@ object FilterEngine {
     }
 
     private fun applyFujiFlash(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-
-        val fujiMatrix = ColorMatrix(floatArrayOf(
-            1.0f + 0.12f * intensity, 0.0f, 0.0f, 0f, 8f * intensity,
-            0.0f, 1.0f + 0.18f * intensity, 0.0f, 0f, 12f * intensity,
-            0.0f, 0.0f, 1.0f + 0.08f * intensity, 0f, 5f * intensity,
-            0.0f, 0.0f, 0.0f, 1f, 0f
+        drawWithMatrix(bitmap, blendedMatrix(
+            gains = floatArrayOf(1.12f, 1.18f, 1.08f),
+            offsets = floatArrayOf(8f, 12f, 5f),
+            intensity = intensity
         ))
-        paint.colorFilter = ColorMatrixColorFilter(fujiMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -197,17 +188,11 @@ object FilterEngine {
     }
 
     private fun applyGoldenHour(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-
-        val goldenMatrix = ColorMatrix(floatArrayOf(
-            1.2f + 0.15f * intensity, 0.0f, 0.0f, 0f, 25f * intensity,
-            0.0f, 1.05f + 0.1f * intensity, 0.0f, 0f, 15f * intensity,
-            0.0f, 0.0f, 0.85f + 0.05f * intensity, 0f, -10f * intensity,
-            0.0f, 0.0f, 0.0f, 1f, 0f
+        drawWithMatrix(bitmap, blendedMatrix(
+            gains = floatArrayOf(1.35f, 1.15f, 0.9f),
+            offsets = floatArrayOf(25f, 15f, -10f),
+            intensity = intensity
         ))
-        paint.colorFilter = ColorMatrixColorFilter(goldenMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -241,17 +226,11 @@ object FilterEngine {
     }
 
     private fun applyMatahariTerbenam(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-
-        val sunsetMatrix = ColorMatrix(floatArrayOf(
-            1.25f + 0.2f * intensity, 0.0f, 0.0f, 0f, 30f * intensity,
-            0.0f, 0.95f + 0.1f * intensity, 0.0f, 0f, 10f * intensity,
-            0.0f, 0.0f, 0.8f + 0.08f * intensity, 0f, -15f * intensity,
-            0.0f, 0.0f, 0.0f, 1f, 0f
+        drawWithMatrix(bitmap, blendedMatrix(
+            gains = floatArrayOf(1.45f, 1.05f, 0.88f),
+            offsets = floatArrayOf(30f, 10f, -15f),
+            intensity = intensity
         ))
-        paint.colorFilter = ColorMatrixColorFilter(sunsetMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
@@ -289,17 +268,11 @@ object FilterEngine {
     }
 
     private fun applyLampuKilatIphone(bitmap: Bitmap, width: Int, height: Int, intensity: Float) {
-        val canvas = Canvas(bitmap)
-        val paint = Paint()
-
-        val iphoneFlashMatrix = ColorMatrix(floatArrayOf(
-            1.1f + 0.08f * intensity, 0.0f, 0.0f, 0f, 15f * intensity,
-            0.0f, 1.08f + 0.08f * intensity, 0.0f, 0f, 12f * intensity,
-            0.0f, 0.0f, 1.05f + 0.1f * intensity, 0f, 8f * intensity,
-            0.0f, 0.0f, 0.0f, 1f, 0f
+        drawWithMatrix(bitmap, blendedMatrix(
+            gains = floatArrayOf(1.18f, 1.16f, 1.15f),
+            offsets = floatArrayOf(15f, 12f, 8f),
+            intensity = intensity
         ))
-        paint.colorFilter = ColorMatrixColorFilter(iphoneFlashMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
 
         val pixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)

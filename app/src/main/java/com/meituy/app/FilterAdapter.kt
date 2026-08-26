@@ -64,13 +64,13 @@ class FilterAdapter(
             
             val thumbnailResId = when (filter) {
                 FilterType.ORIGINAL -> R.drawable.filter_original
-                FilterType.RICON_FLASH -> R.drawable.filter_original
-                FilterType.FLASH_FILM -> R.drawable.filter_original
-                FilterType.G7X -> R.drawable.filter_original
-                FilterType.FUJI_FLASH -> R.drawable.filter_original
-                FilterType.GOLDEN_HOUR -> R.drawable.filter_original
-                FilterType.MATAHARI_TERBENAM -> R.drawable.filter_original
-                FilterType.LAMPU_KILAT_IPHONE -> R.drawable.filter_original
+                FilterType.RICON_FLASH -> R.drawable.filter_brightness
+                FilterType.FLASH_FILM -> R.drawable.filter_contrast
+                FilterType.G7X -> R.drawable.filter_iphone_vibrant
+                FilterType.FUJI_FLASH -> R.drawable.filter_enhance
+                FilterType.GOLDEN_HOUR -> R.drawable.filter_meitu_style
+                FilterType.MATAHARI_TERBENAM -> R.drawable.filter_saturation
+                FilterType.LAMPU_KILAT_IPHONE -> R.drawable.filter_iphone_portrait
             }
             
             filterThumbnail.setImageResource(thumbnailResId)

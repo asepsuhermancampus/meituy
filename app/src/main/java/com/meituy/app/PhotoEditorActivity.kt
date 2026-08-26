@@ -2,6 +2,7 @@ package com.meituy.app
 
 import android.Manifest
 import android.content.ContentValues
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -16,32 +17,32 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.io.OutputStream
 
-class MainActivity : AppCompatActivity() {
+class PhotoEditorActivity : AppCompatActivity() {
 
     private lateinit var imageView: ImageView
     private lateinit var filterRecyclerView: RecyclerView
     private lateinit var btnSelectImage: MaterialButton
     private lateinit var btnSaveImage: MaterialButton
-    private lateinit var btnReset: MaterialButton
+    private lateinit var btnAILab: MaterialButton
     private lateinit var progressBar: ProgressBar
     private lateinit var placeholderText: TextView
     private lateinit var sliderContainer: View
     private lateinit var intensitySlider: Slider
-    private lateinit var intensityLabel: TextView
+    private lateinit var tabLayout: TabLayout
 
     private var currentBitmap: Bitmap? = null
     private var originalBitmap: Bitmap? = null
@@ -49,7 +50,6 @@ class MainActivity : AppCompatActivity() {
     private var currentIntensity: Float = 1.0f
     private lateinit var filterAdapter: FilterAdapter
     private var isProcessing: Boolean = false
-    private var lastSavedUri: Uri? = null
 
     private val requestStoragePermission = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -65,64 +65,65 @@ class MainActivity : AppCompatActivity() {
     private val pickImageLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            try {
-                showLoading(true)
-                lifecycleScope.launch(Dispatchers.Default) {
-                    val bitmap = try {
-                        val options = BitmapFactory.Options().apply {
-                            inJustDecodeBounds = true
-                        }
-                        BitmapFactory.decodeStream(contentResolver.openInputStream(it), null, options)
-                        
-                        val newOptions = BitmapFactory.Options().apply {
-                            inSampleSize = calculateInSampleSize(options, 2048, 2048)
-                        }
-                        BitmapFactory.decodeStream(contentResolver.openInputStream(it), null, newOptions)
-                    } catch (e: Exception) {
-                        null
-                    }
-                    
-                    runOnUiThread {
-                        if (bitmap != null) {
-                            originalBitmap?.recycle()
-                            currentBitmap?.recycle()
-                            
-                            originalBitmap = bitmap
-                            currentBitmap = bitmap.copy(bitmap.config, true)
-                            
-                            imageView.setImageBitmap(currentBitmap)
-                            filterAdapter.setSelectedFilter(FilterType.ORIGINAL)
-                            currentFilter = FilterType.ORIGINAL
-                            currentIntensity = 1.0f
-                            intensitySlider.value = 100f
-                            sliderContainer.visibility = View.GONE
-                            showLoading(false)
-                            updatePlaceholderVisibility()
-                        } else {
-                            Toast.makeText(this@MainActivity, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
-                            showLoading(false)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
-                    showLoading(false)
-                }
-            }
-        }
+        uri?.let { loadImage(it) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        setContentView(R.layout.activity_photo_editor)
 
         initViews()
+        setupTabs()
         setupRecyclerView()
         setupClickListeners()
         setupSlider()
         updatePlaceholderVisibility()
+
+        intent?.data?.let { loadImage(it) }
+    }
+
+    private fun loadImage(uri: Uri) {
+        showLoading(true)
+        lifecycleScope.launch(Dispatchers.Default) {
+            val bitmap = try {
+                val options = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
+                }
+                contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, options)
+                }
+
+                val newOptions = BitmapFactory.Options().apply {
+                    inSampleSize = calculateInSampleSize(options, 2048, 2048)
+                }
+                contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, newOptions)
+                }
+            } catch (e: Exception) {
+                null
+            }
+
+            withContext(Dispatchers.Main) {
+                if (bitmap != null) {
+                    originalBitmap?.recycle()
+                    currentBitmap?.recycle()
+
+                    originalBitmap = bitmap
+                    currentBitmap = bitmap.copy(bitmap.config, true)
+
+                    imageView.setImageBitmap(currentBitmap)
+                    filterAdapter.setSelectedFilter(FilterType.ORIGINAL)
+                    currentFilter = FilterType.ORIGINAL
+                    currentIntensity = 1.0f
+                    intensitySlider.value = 100f
+                    sliderContainer.visibility = View.GONE
+                    updatePlaceholderVisibility()
+                } else {
+                    Toast.makeText(this@PhotoEditorActivity, R.string.error_loading_image, Toast.LENGTH_SHORT).show()
+                }
+                showLoading(false)
+            }
+        }
     }
 
     private fun initViews() {
@@ -130,12 +131,34 @@ class MainActivity : AppCompatActivity() {
         filterRecyclerView = findViewById(R.id.filterRecyclerView)
         btnSelectImage = findViewById(R.id.btnSelectImage)
         btnSaveImage = findViewById(R.id.btnSaveImage)
-        btnReset = findViewById(R.id.btnReset)
+        btnAILab = findViewById(R.id.btnAILab)
         progressBar = findViewById(R.id.progressBar)
         placeholderText = findViewById(R.id.placeholderText)
         sliderContainer = findViewById(R.id.sliderContainer)
         intensitySlider = findViewById(R.id.intensitySlider)
-        intensityLabel = findViewById(R.id.intensityLabel)
+        tabLayout = findViewById(R.id.tabLayout)
+    }
+
+    private fun setupTabs() {
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.beauty))
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.filters))
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.adjust))
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.effects))
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.crop_tools))
+        
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> showBeautyTools()
+                    1 -> showFilters()
+                    2 -> showAdjust()
+                    3 -> showEffects()
+                    4 -> showCropTools()
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
     }
 
     private fun setupRecyclerView() {
@@ -161,16 +184,14 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        btnReset.setOnClickListener {
-            if (!isProcessing && originalBitmap != null) {
-                resetToOriginal()
-            }
-        }
-
         btnSaveImage.setOnClickListener {
             if (!isProcessing && currentBitmap != null) {
                 saveImage()
             }
+        }
+
+        btnAILab.setOnClickListener {
+            startActivity(Intent(this, AILabActivity::class.java))
         }
     }
 
@@ -181,6 +202,26 @@ class MainActivity : AppCompatActivity() {
                 applyFilter(currentFilter, currentIntensity, fromSlider = true)
             }
         }
+    }
+
+    private fun showBeautyTools() {
+        filterRecyclerView.visibility = View.VISIBLE
+    }
+
+    private fun showFilters() {
+        filterRecyclerView.visibility = View.VISIBLE
+    }
+
+    private fun showAdjust() {
+        filterRecyclerView.visibility = View.VISIBLE
+    }
+
+    private fun showEffects() {
+        filterRecyclerView.visibility = View.VISIBLE
+    }
+
+    private fun showCropTools() {
+        filterRecyclerView.visibility = View.VISIBLE
     }
 
     private fun checkStoragePermission() {
@@ -270,38 +311,25 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         showLoading(false)
                         isProcessing = false
-                        Toast.makeText(this@MainActivity, "Error applying filter", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@PhotoEditorActivity, "Error applying filter", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
     }
 
-    private fun resetToOriginal() {
-        originalBitmap?.let { original ->
-            currentBitmap?.recycle()
-            currentBitmap = original.copy(original.config, true)
-            imageView.setImageBitmap(currentBitmap)
-            filterAdapter.setSelectedFilter(FilterType.ORIGINAL)
-            currentFilter = FilterType.ORIGINAL
-            currentIntensity = 1.0f
-            intensitySlider.value = 100f
-            sliderContainer.visibility = View.GONE
-        }
-    }
-
     private fun saveImage() {
-        if (currentBitmap == null) return
+        val bitmap = currentBitmap ?: return
 
         showLoading(true)
         btnSaveImage.isEnabled = false
 
         lifecycleScope.launch(Dispatchers.Default) {
-            try {
+            val result = runCatching {
                 val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
                 val filterName = currentFilter.displayName.replace(" ", "_")
                 val fileName = "Meituy_${filterName}_${timestamp}"
-                
+
                 val contentValues = ContentValues().apply {
                     put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
                     put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
@@ -312,41 +340,22 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-                
-                runOnUiThread {
-                    if (uri != null) {
-                        lastSavedUri = uri
-                        try {
-                            val outputStream: OutputStream? = contentResolver.openOutputStream(uri)
-                            outputStream?.use {
-                                currentBitmap?.compress(Bitmap.CompressFormat.JPEG, 90, it)
-                            }
-                            runOnUiThread {
-                                Toast.makeText(this@MainActivity, R.string.image_saved, Toast.LENGTH_SHORT).show()
-                                showLoading(false)
-                                btnSaveImage.isEnabled = true
-                            }
-                        } catch (e: Exception) {
-                            runOnUiThread {
-                                Toast.makeText(this@MainActivity, "Error saving: ${e.message}", Toast.LENGTH_SHORT).show()
-                                showLoading(false)
-                                btnSaveImage.isEnabled = true
-                            }
-                        }
-                    } else {
-                        runOnUiThread {
-                            Toast.makeText(this@MainActivity, R.string.image_save_error, Toast.LENGTH_SHORT).show()
-                            showLoading(false)
-                            btnSaveImage.isEnabled = true
-                        }
+                    ?: error("insert returned null")
+
+                contentResolver.openOutputStream(uri)?.use { out ->
+                    if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)) {
+                        error("compress failed")
                     }
-                }
-            } catch (e: Exception) {
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Error saving: ${e.message}", Toast.LENGTH_SHORT).show()
-                    showLoading(false)
-                    btnSaveImage.isEnabled = true
-                }
+                } ?: error("openOutputStream returned null")
+            }
+
+            withContext(Dispatchers.Main) {
+                result.fold(
+                    onSuccess = { Toast.makeText(this@PhotoEditorActivity, R.string.image_saved, Toast.LENGTH_SHORT).show() },
+                    onFailure = { Toast.makeText(this@PhotoEditorActivity, getString(R.string.image_save_error) + ": ${it.message}", Toast.LENGTH_SHORT).show() }
+                )
+                showLoading(false)
+                btnSaveImage.isEnabled = true
             }
         }
     }
@@ -355,12 +364,11 @@ class MainActivity : AppCompatActivity() {
         progressBar.visibility = if (show) View.VISIBLE else View.GONE
         btnSelectImage.isEnabled = !show
         btnSaveImage.isEnabled = !show
-        btnReset.isEnabled = !show && originalBitmap != null
+        btnAILab.isEnabled = !show
     }
 
     private fun updatePlaceholderVisibility() {
         placeholderText.visibility = if (currentBitmap == null) View.VISIBLE else View.GONE
-        btnReset.isEnabled = originalBitmap != null && !isProcessing
     }
 
     override fun onDestroy() {

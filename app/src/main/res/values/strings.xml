@@ -19,4 +19,25 @@
     <string name="image_save_error">Failed to save image</string>
     <string name="permission_required">Storage permission required</string>
     <string name="error_loading_image">Error loading image</string>
+    <string name="edit_photo">Edit Photo</string>
+    <string name="camera">Camera</string>
+    <string name="ai_lab">AI Lab</string>
+    <string name="beauty">Beauty</string>
+    <string name="skin">Skin</string>
+    <string name="face">Face</string>
+    <string name="eyes">Eyes</string>
+    <string name="nose">Nose</string>
+    <string name="lips">Lips</string>
+    <string name="filters">Filters</string>
+    <string name="adjust">Adjust</string>
+    <string name="effects">Effects</string>
+    <string name="crop_tools">Crop & Tools</string>
+    <string name="export">Export</string>
+    <string name="ai_enhance">AI Enhance</string>
+    <string name="ai_portrait">AI Portrait</string>
+    <string name="style_studio">Style Studio</string>
+    <string name="ai_relight">AI Relight</string>
+    <string name="photo_mode">Photo</string>
+    <string name="video_mode">Video</string>
+    <string name="portrait_mode">Portrait</string>
 </resources>
