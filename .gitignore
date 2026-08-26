@@ -44,10 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Foto pribadi (diwarisi dari .gitignore native lama)
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
-*.webp
+# Foto pribadi di root project
+/Foto*
