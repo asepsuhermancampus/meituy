@@ -68,4 +68,56 @@ void main() {
       expect(out.rgba[7], 255, reason: t.displayName);
     }
   });
+
+  Uint8List noisyGradient(int w, int h) {
+    final px = Uint8List(w * h * 4);
+    var seed = 42;
+    int next() {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed % 256;
+    }
+
+    for (var i = 0; i < px.length; i += 4) {
+      px[i] = next();
+      px[i + 1] = next() ~/ 2;
+      px[i + 2] = next() ~/ 4;
+      px[i + 3] = 255;
+    }
+    return px;
+  }
+
+  test('aiPortrait menghaluskan piksel skin-tone (nilai mendekati rata-rata)', () {
+    const w = 40, h = 40;
+    final src = noisyGradient(w, h);
+    final out = FilterEngine.apply(src, w, h, FilterType.aiPortrait, 1.0);
+
+    // Total variasi (sum |delta| antar piksel horizontal) harus turun.
+    int variation(Uint8List p) {
+      var sum = 0;
+      for (var y = 0; y < h; y++) {
+        for (var x = 1; x < w; x++) {
+          final i = (y * w + x) * 4;
+          sum += (p[i] - p[i - 4]).abs();
+        }
+      }
+      return sum;
+    }
+
+    expect(variation(out.rgba), lessThan(variation(src)),
+        reason: 'smoothing harus meredam variasi');
+  });
+
+  test('aiRelight menerangi area dekat sumber cahaya lebih terang dari sudut', () {
+    const w = 9, h = 9;
+    final px = grey9x9();
+    for (var i = 3; i < px.length; i += 4) {
+      px[i] = 255;
+    }
+    final out = FilterEngine.apply(px, w, h, FilterType.aiRelight, 1.0);
+    // Sumber di (4, 3.15) → piksel (4,3); sudut kiri-atas (0,0).
+    final nearLight = (3 * w + 4) * 4;
+    expect(out.rgba[nearLight], greaterThan(out.rgba[0]));
+    // Alpha tak tersentuh.
+    expect(out.rgba[nearLight + 3], 255);
+  });
 }

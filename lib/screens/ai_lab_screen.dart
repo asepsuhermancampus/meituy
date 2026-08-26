@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../models/filter_type.dart';
+import 'editor_screen.dart';
+
 class AiLabScreen extends StatelessWidget {
   const AiLabScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // ponytail: AI Portrait & AI Relight masih placeholder; butuh ML Kit/face detection, tambah saat fitur dipesan.
     final cards = [
-      (Icons.auto_fix_high, 'AI Enhance', 'Auto improve your photo'),
-      (Icons.face_retouching_natural, 'AI Portrait', 'Coming soon'),
-      (Icons.style, 'Style Studio', 'Preset styles one tap'),
-      (Icons.wb_sunny_outlined, 'AI Relight', 'Coming soon'),
+      (Icons.auto_fix_high, 'AI Enhance', 'Auto improve your photo',
+          () => Navigator.pushNamed(context, '/editor')),
+      (Icons.face_retouching_natural, 'AI Portrait', 'Skin smooth + bokeh',
+          () => _open(context, FilterType.aiPortrait)),
+      (Icons.style, 'Style Studio', 'Preset styles one tap',
+          () => Navigator.pushNamed(context, '/editor')),
+      (Icons.wb_sunny_outlined, 'AI Relight', 'Warm relighting effect',
+          () => _open(context, FilterType.aiRelight)),
     ];
 
     return Scaffold(
@@ -21,22 +27,23 @@ class AiLabScreen extends StatelessWidget {
         mainAxisSpacing: 16,
         crossAxisSpacing: 16,
         children: [
-          for (final (icon, title, subtitle) in cards)
+          for (final (icon, title, subtitle, onTap) in cards)
             _Card(
               icon: icon,
               title: title,
               subtitle: subtitle,
-              onTap: () {
-                if (title == 'AI Portrait' || title == 'AI Relight') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('$title coming soon')));
-                  return;
-                }
-                Navigator.pushNamed(context, '/editor');
-              },
+              onTap: onTap,
             ),
         ],
       ),
+    );
+  }
+
+  void _open(BuildContext context, FilterType filter) {
+    Navigator.pushNamed(
+      context,
+      '/editor',
+      arguments: EditorArgs(initialFilter: filter),
     );
   }
 }

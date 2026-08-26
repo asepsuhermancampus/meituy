@@ -6,7 +6,9 @@ enum FilterType {
   fujiFlash('Fuji Flash'),
   goldenHour('Golden Hour'),
   matahariTerbenam('Matahari Terbenam'),
-  lampuKilatIphone('Lampu Kilat iPhone');
+  lampuKilatIphone('Lampu Kilat iPhone'),
+  aiPortrait('AI Portrait'),
+  aiRelight('AI Relight');
 
   final String displayName;
   const FilterType(this.displayName);

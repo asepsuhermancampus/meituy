@@ -51,6 +51,12 @@ class FilterEngine {
       case FilterType.lampuKilatIphone:
         _lampuKilatIphone(out, intensity);
         break;
+      case FilterType.aiPortrait:
+        _aiPortrait(out, width, height, intensity);
+        break;
+      case FilterType.aiRelight:
+        _aiRelight(out, width, height, intensity);
+        break;
     }
     return FilteredImage(out, width, height);
   }
@@ -231,6 +237,128 @@ class FilterEngine {
       px[i + 2] = nb.round().clamp(0, 255);
     }
   }
+
+  /// AI Portrait: skin smoothing dengan edge-preserve + depth-of-field radial
+  /// (pusat tajam, tepi lembut). Blur = box blur separable 3x iterasi.
+  static void _aiPortrait(Uint8List px, int width, int height, double t) {
+    final radius = (math.min(width, height) * 0.012).round().clamp(2, 24);
+    final blurred = _boxBlur3(px, width, height, radius);
+
+    // Bobot skin-tone: heuristik r >= g > b pada piksel kuliah menengah.
+    double skinWeight(int r, int g, int b) {
+      if (r < 60 || g < 30) return 0;
+      if (r < g || g < b) return 0;
+      final dr = (r - g) / 80.0;
+      if (dr > 1) return 0;
+      return (1 - dr).clamp(0.0, 1.0);
+    }
+
+    final centerX = width / 2.0;
+    final centerY = height / 2.0;
+
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final i = (y * width + x) * 4;
+        final r = px[i].toDouble(), g = px[i + 1].toDouble(), b = px[i + 2].toDouble();
+        final lum = 0.299 * r + 0.587 * g + 0.114 * b;
+        final bl = 0.299 * blurred[i] + 0.587 * blurred[i + 1] + 0.114 * blurred[i + 2];
+
+        // Edge-preserve: detail penting (mata, rambut) punya delta luminance besar.
+        final edge = ((lum - bl).abs() / 40.0).clamp(0.0, 1.0);
+        final smooth = t * skinWeight(r.toInt(), g.toInt(), b.toInt()) * (1 - edge) * 0.85;
+
+        // Depth-of-field: makin jauh dari pusat makin blur.
+        final dx = (x - centerX) / centerX;
+        final dy = (y - centerY) / centerY;
+        final dist = math.sqrt(dx * dx + dy * dy) / math.sqrt2;
+        final dof = t * 0.55 * dist.clamp(0.0, 1.0);
+
+        final w = (smooth + dof * (1 - smooth)).clamp(0.0, 1.0);
+        if (w <= 0) continue;
+        px[i] = (r + (blurred[i] - r) * w).round().clamp(0, 255);
+        px[i + 1] = (g + (blurred[i + 1] - g) * w).round().clamp(0, 255);
+        px[i + 2] = (b + (blurred[i + 2] - b) * w).round().clamp(0, 255);
+      }
+    }
+
+    // Glow halus + tone hangat tipis.
+    _blendedMatrixPass(px, [1.03, 1.01, 0.99], [3 * t, 1.5 * t, -1 * t], t);
+  }
+
+  /// AI Relight: sumber cahaya hangat di atas-tengah; area dekat diterangi,
+  /// jauh digelapkan lembut — memberi kesan cahaya ulang pada foto datar.
+  static void _aiRelight(Uint8List px, int width, int height, double t) {
+    final lx = width / 2.0;
+    final ly = height * 0.35;
+    final radius = math.max(width, height) * 0.85;
+
+    for (var y = 0; y < height; y++) {
+      for (var x = 0; x < width; x++) {
+        final i = (y * width + x) * 4;
+        final dx = (x - lx) / radius;
+        final dy = (y - ly) / radius;
+        final dist = math.sqrt(dx * dx + dy * dy).clamp(0.0, 1.5);
+        // Gain cahaya: puncak +0.45t di sumber, −0.28t di tepi gelap.
+        final near = (1 - dist).clamp(0.0, 1.0);
+        var gain = 1.0 + t * 0.45 * near * near - t * 0.28 * dist;
+        gain = gain.clamp(0.6, 1.6);
+        // Tint amber mengikuti kekuatan cahaya.
+        final warm = t * 14 * near * near;
+        px[i] = (px[i] * gain + warm).round().clamp(0, 255);
+        px[i + 1] = (px[i + 1] * gain + warm * 0.55).round().clamp(0, 255);
+        px[i + 2] = (px[i + 2] * gain).round().clamp(0, 255);
+      }
+    }
+  }
+
+  /// Box blur satu channel-set RGBA (alpha ikut diblur tapi tak dipakai).
+  static Uint8List _boxBlur3(Uint8List src, int w, int h, int radius) {
+    var buf = Uint8List.fromList(src);
+    final tmp = Uint8List(buf.length);
+    for (var pass = 0; pass < 3; pass++) {
+      _boxBlurPass(buf, tmp, w, h, radius, horizontal: true);
+      _boxBlurPass(tmp, buf, w, h, radius, horizontal: false);
+    }
+    return buf;
+  }
+
+  static void _boxBlurPass(
+    Uint8List src,
+    Uint8List dst,
+    int w,
+    int h,
+    int r, {
+    required bool horizontal,
+  }) {
+    final outer = horizontal ? h : w;
+    final inner = horizontal ? w : h;
+    final step = horizontal ? 4 : w * 4;
+    for (var o = 0; o < outer; o++) {
+      final rowBase = o * (horizontal ? w : 1) * 4;
+      // Sliding window sum per channel.
+      var sums = Float64List(4);
+      for (var k = -r; k <= r; k++) {
+        final idx = rowBase + (_clampi(k, 0, inner - 1)) * step;
+        for (var c = 0; c < 4; c++) {
+          sums[c] += src[idx + c];
+        }
+      }
+      final win = 2 * r + 1;
+      for (var i = 0; i < inner; i++) {
+        final idx = rowBase + i * step;
+        for (var c = 0; c < 4; c++) {
+          dst[idx + c] = (sums[c] / win).round().clamp(0, 255);
+        }
+        final addIdx = rowBase + _clampi(i + r + 1, 0, inner - 1) * step;
+        final subIdx = rowBase + _clampi(i - r, 0, inner - 1) * step;
+        for (var c = 0; c < 4; c++) {
+          sums[c] += src[addIdx + c] - src[subIdx + c];
+        }
+      }
+    }
+  }
+
+  static int _clampi(int v, int lo, int hi) => v < lo ? lo : (v > hi ? hi : v);
 
   static void _vignette(Uint8List px, int width, int height, double strength) {
     final centerX = width / 2.0;

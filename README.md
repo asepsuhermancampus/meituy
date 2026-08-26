@@ -22,12 +22,19 @@ Semua filter bekerja **OFFLINE** tanpa koneksi internet.
   - **Matahari Terbenam** - Sunset dramatis + vignette
   - **Lampu Kilat iPhone** - iPhone flash look
 
+- **2 AI Effects (offline, tanpa ML):**
+  - **AI Portrait** - Skin smoothing dengan edge-preserve + depth-of-field radial
+  - **AI Relight** - Relighting hangat dari sumber cahaya atas-tengah
+
+- **Upload foto** dari galeri atau kamera — tombol selalu tersedia
+- **Simpan/Download** hasil edit ke galeri (album `DCIM/Meituy`)
+
 - **UI/UX:** Dark theme, Material Design 3
 - **Filter thumbnails live** dari foto yang dipilih
 - **Intensity slider** 0-100%
 - **Save** ke galeri (album `DCIM/Meituy`), nama file timestamp + nama filter
 - **Camera** langsung dari Home → edit hasil jepretan
-- **AI Lab**: AI Enhance & Style Studio membuka editor; AI Portrait & AI Relight coming soon
+- **AI Lab**: AI Enhance, Style Studio, AI Portrait, AI Relight — semua fungsional
 - **InteractiveViewer** pinch-zoom pada preview
 - Processing di background isolate — UI tidak pernah blocked
 

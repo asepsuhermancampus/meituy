@@ -12,7 +12,8 @@ import '../models/filter_type.dart';
 
 class EditorArgs {
   final bool openCamera;
-  const EditorArgs({this.openCamera = false});
+  final FilterType? initialFilter;
+  const EditorArgs({this.openCamera = false, this.initialFilter});
 }
 
 class _FilterJob {
@@ -50,6 +51,7 @@ class _EditorScreenState extends State<EditorScreen> {
   FilterType _filter = FilterType.original;
   double _intensity = 1.0;
   bool _busy = false;
+  FilterType? _pendingInitialFilter;
 
   @override
   void initState() {
@@ -57,9 +59,9 @@ class _EditorScreenState extends State<EditorScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final args =
           ModalRoute.of(context)?.settings.arguments as EditorArgs?;
-      if (args?.openCamera ?? false) {
-        _pick(fromCamera: true);
-      }
+      if (args == null) return;
+      _pendingInitialFilter = args.initialFilter;
+      if (args.openCamera) _pick(fromCamera: true);
     });
   }
 
@@ -106,15 +108,20 @@ class _EditorScreenState extends State<EditorScreen> {
     final preview = await _toUiImage(rgba, w, h);
     final thumbs = await _buildThumbnails(rgba, w, h);
     if (!mounted) return;
-    setState(() {
-      _originalRgba = rgba;
-      _width = w;
-      _height = h;
-      _preview = preview;
-      _thumbnails = thumbs;
-      _filter = FilterType.original;
-      _intensity = 1.0;
-    });
+      setState(() {
+        _originalRgba = rgba;
+        _width = w;
+        _height = h;
+        _preview = preview;
+        _thumbnails = thumbs;
+        _filter = FilterType.original;
+        _intensity = 1.0;
+      });
+      final pending = _pendingInitialFilter;
+      if (pending != null) {
+        _pendingInitialFilter = null;
+        await _selectFilter(pending);
+      }
   }
 
   Future<Map<FilterType, ui.Image>> _buildThumbnails(
@@ -271,32 +278,39 @@ class _EditorScreenState extends State<EditorScreen> {
               ]),
             ),
           if (hasImage) _buildFilterStrip(),
-          if (hasImage)
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      icon: const Icon(Icons.photo_library_outlined),
-                      label: const Text('Gallery'),
-                      onPressed: _busy ? null : () => _pick(),
-                    ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.upload),
+                    label: const Text('Upload'),
+                    onPressed: _busy ? null : () => _pick(),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      icon: _busy
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.save),
-                      label: const Text('Save'),
-                      style: FilledButton.styleFrom(backgroundColor: Colors.orange),
-                      onPressed: _busy ? null : _save,
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.photo_camera),
+                    label: const Text('Kamera'),
+                    onPressed: _busy ? null : () => _pick(fromCamera: true),
                   ),
-                ]),
-              ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    icon: _busy
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.download),
+                    label: const Text('Simpan'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+                    onPressed: (_busy || !hasImage) ? null : _save,
+                  ),
+                ),
+              ]),
             ),
+          ),
         ],
       ),
     );
@@ -310,9 +324,29 @@ class _EditorScreenState extends State<EditorScreen> {
           children: [
             Icon(Icons.image_outlined, size: 80, color: Colors.grey.shade700),
             const SizedBox(height: 12),
-            Text('Tap Gallery to select a photo\nor Camera to take one',
+            Text('Belum ada foto. Upload atau jepret untuk mulai mengedit.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey.shade500)),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              icon: const Icon(Icons.upload),
+              label: const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                child: Text('Upload Foto', style: TextStyle(fontSize: 16)),
+              ),
+              style: FilledButton.styleFrom(backgroundColor: Colors.orange),
+              onPressed: _busy ? null : () => _pick(),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.photo_camera),
+              label: const Text('Kamera'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.amberAccent,
+                side: const BorderSide(color: Colors.amberAccent),
+              ),
+              onPressed: _busy ? null : () => _pick(fromCamera: true),
+            ),
           ],
         ),
       );
