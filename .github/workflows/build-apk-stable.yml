@@ -1,4 +1,4 @@
-name: Build Debug APK (Stable)
+name: Build Debug APK
 
 on:
   push:
@@ -8,43 +8,43 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
-      
-    - name: Set up JDK 17
+
+    - name: Set up Java
       uses: actions/setup-java@v5
       with:
-        java-version: '17'
+        java-version: '21'
         distribution: 'temurin'
-        cache: gradle
-        
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      
+
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        cache: true
+
+    - name: Install dependencies
+      run: flutter pub get
+
+    - name: Analyze
+      run: flutter analyze --fatal-infos
+
+    - name: Test
+      run: flutter test
+
     - name: Build Debug APK
-      run: |
-        ./gradlew clean assembleDebug --stacktrace
-        ls -la app/build/outputs/apk/debug/
-        
-    - name: Get version info
-      id: info
-      run: |
-        VERSION=$(grep "versionName" app/build.gradle.kts | awk -F'"' '{print $2}')
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "date=$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
-        echo "run=${{ github.run_number }}" >> $GITHUB_OUTPUT
-        
+      run: flutter build apk --debug
+
     - name: Rename APK
       run: |
-        cd app/build/outputs/apk/debug
-        mv app-debug.apk meituy-v${{ steps.info.outputs.version }}-build${{ steps.info.outputs.run }}.apk
-        ls -la
-        
+        cd build/app/outputs/flutter-apk
+        mv app-debug.apk meituy-debug-build${{ github.run_number }}.apk
+
     - name: Upload APK
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v4
       with:
         name: Meituy-Debug-APK
-        path: app/build/outputs/apk/debug/*.apk
+        path: build/app/outputs/flutter-apk/*.apk
         retention-days: 90

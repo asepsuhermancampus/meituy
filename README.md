@@ -1,144 +1,73 @@
 # Meituy - Photo Editor App 📸
 
-Android photo editing app with iPhone-style filters inspired by iPhone 15+ computational photography.
+Aplikasi edit foto dengan filter bergaya kamera premium, dibangun dengan **Flutter**.
 
 ## Important Notes
 
 ### 🚫 **NO INTERNET REQUIRED!**
-**Semua filter bekerja OFFLINE tanpa koneksi internet.**
+Semua filter bekerja **OFFLINE** tanpa koneksi internet.
 - Image processing menggunakan algoritma lokal di device
 - Tidak ada data yang dikirim ke server
 - 100% privacy - semua processing di device Anda
 
-### ✅ **Project Status: Ready to Test**
-- **UI/UX:** Elegan & user-friendly (Material Design 3)
-- **Performance:** Optimized untuk device Android
-- **Stability:** Memory management, no crashes, no leaks
-- **Features:** 13 filter premium + intensity slider
-
 ## Features
 
-- **13 Premium Filters:**
-  - **Original** - Clean original image
-  - **Enhance** - General photo enhancement
-  - **Brightness** - Light level adjustment
-  - **Contrast** - Dynamic range improvement
-  - **Saturation** - Color intensity boost
-  - **Sharp** - Edge enhancement
-  - **Color Fix** - White balance correction
-  - **Meitu** - All-in-one Meitu style
+- **8 Premium Filters:**
+  - **Original** - Gambar asli
+  - **Ricon Flash** - Flash camera style, highlight lembut
+  - **Flash Film** - Film flash look dengan kontras
+  - **G7X** - Canon G7X compact camera style
+  - **Fuji Flash** - Fujifilm flash aesthetic
+  - **Golden Hour** - Warm sunset tones
+  - **Matahari Terbenam** - Sunset dramatis + vignette
+  - **Lampu Kilat iPhone** - iPhone flash look
 
-- **iPhone 15+ Inspired Filters:**
-  - **Vibrant** - Rich, saturated colors with highlight roll-off
-  - **Natural** - Authentic skin tones, true-to-life colors
-  - **Dramatic** - High contrast, deep blacks, cinematic feel
-  - **Portrait** - Skin softening, portrait optimization
-  - **Cinematic** - Teal/orange color grading with vignette
-
-## **UI/UX Features**
-
-### ✅ **Modern & Elegant Interface**
-- Material Design 3 with proper AppBar
-- Card-based filter selection
-- Smooth animations and transitions
-
-### ✅ **Intelligent Controls**
-- **Intensity Slider** - Adjust filter strength (0-100%)
-- **Reset Button** - One-tap to revert to original
-- **Loading Indicators** - Visual feedback during processing
-- **Placeholder UI** - Clean empty state with instructions
-
-### ✅ **Performance Optimizations**
-- **Bitmap Decoding** - Automatic downscaling for large images
-- **Memory Management** - Proper recycle() calls to prevent OOM
-- **Async Processing** - Coroutines for non-blocking UI
-- **Thread Safety** - Main thread never blocked
-
-### ✅ **Permission Handling**
-- Graceful permission requests
-- Clear error messages
-- Permission denial recovery
-
-### ✅ **File Management**
-- Photos saved with timestamp + filter name
-- No duplicate files
-- Proper storage location (Gallery/DCIM)
-
-## Architecture
-
-- **Kotlin** with Coroutines for async processing
-- **MVVM-friendly** structure
-- **Bitmap processing** with ColorMatrix for efficient operations
-- **Memory optimized** - proper bitmap recycling
-- **Modern UI** with Material Design 3
+- **UI/UX:** Dark theme, Material Design 3
+- **Filter thumbnails live** dari foto yang dipilih
+- **Intensity slider** 0-100%
+- **Save** ke galeri (album `DCIM/Meituy`), nama file timestamp + nama filter
+- **Camera** langsung dari Home → edit hasil jepretan
+- **AI Lab**: AI Enhance & Style Studio membuka editor; AI Portrait & AI Relight coming soon
+- **InteractiveViewer** pinch-zoom pada preview
+- Processing di background isolate — UI tidak pernah blocked
 
 ## Tech Stack
 
-- Minimum SDK: 26 (Android 8.0)
-- Target SDK: 34 (Android 14)
-- Kotlin Coroutines for background processing
-- AndroidX libraries (AppCompat, Material, ConstraintLayout, RecyclerView)
-- No external dependencies needed
-
-## How to Build
-
-1. Clone repository
-2. Open in Android Studio (Electric Eel+ recommended)
-3. Build project
-4. Run on emulator or physical device (Android 8.0+)
-
-## Usage
-
-1. Tap **Gallery** button to select photo
-2. Scroll through filter thumbnails
-3. Tap filter to apply
-4. Adjust intensity with slider (0-100%)
-5. Tap **Save** to save edited photo
-6. Tap **Reset** to revert to original
-
-## Performance Optimizations
-
-- **Bitmap recycling** - prevents memory leaks
-- **Coroutines** - background processing without blocking UI
-- **Efficient algorithms** - optimized for mobile processing
-- **Scaled processing** - maintains performance with high-res images
+- **Flutter 3.44+ / Dart 3.12+**
+- `image_picker` — pilih foto galeri / kamera sistem
+- `gal` — simpan ke galeri via MediaStore
+- `image` — decode, resize, encode JPEG
+- Minimum Android: API 21 (default Flutter)
 
 ## Project Structure
 
 ```
-app/src/main/java/com/meituy/app/
-├── MainActivity.kt        # UI controller
-├── FilterEngine.kt        # Image processing engine
-└── FilterAdapter.kt       # RecyclerView adapter
-
-app/src/main/res/
-├── layout/                # UI layouts
-├── drawable/             # Filter thumbnails
-└── values/               # Resources
+lib/
+├── main.dart                  # Entry point + routes + theme
+├── models/
+│   └── filter_type.dart       # Enum 8 filter
+├── engine/
+│   └── filter_engine.dart     # Port pixel-exact dari FilterEngine.kt lama
+└── screens/
+    ├── home_screen.dart       # Menu utama
+    ├── editor_screen.dart     # Editor: preview, thumbnail, slider, save
+    └── ai_lab_screen.dart     # AI Lab cards
+test/
+└── filter_engine_test.dart    # Self-check algoritma filter
 ```
+
+## How to Build
+
+1. Install Flutter SDK (`flutter doctor` harus bersih)
+2. `flutter pub get`
+3. Run: `flutter run`
+4. Build APK: `flutter build apk --release`
 
 ## Filter Algorithms
 
-Each filter uses a combination of:
-- ColorMatrix transformations
-- Pixel-based luminance adjustments
-- Highlight/shadows correction
-- Vignette effects (cinematic filter)
-- Contrast/Saturation balancing
-
-## Device Compatibility
-
-**Perfect for Vivo V40 Lite:**
-- Android 14 (targetSdk 34)
-- 8GB RAM (no memory issues)
-- Large screen (responsive layout)
-- Camera app integration
-
-**Tested on:**
-- Vivo V40 Lite (Android 14)
-- Google Pixel 7 Pro (Android 14)
-- Samsung Galaxy S23 (Android 14)
-- Android Emulator (API 34)
+Setiap filter = color-matrix blend dari identitas (berdasarkan intensitas),
+lalu threshold highlight/shadow per piksel; beberapa filter menambahkan
+warmth lift atau vignette. Identik matematis dengan versi Kotlin aslinya.
 
 ## License
 
